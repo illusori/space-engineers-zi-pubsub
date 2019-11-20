@@ -11,7 +11,7 @@ Register to consume events from event providers without caring if they exist or 
 
 Life has never been so good, that's what Living in the Future(tm) means!
 
-Small print: Zephyr Industries PubSub isn't aimed to directly provide any player-visible behaviour itself. If you install it on a block somewhere, any compatible scrips will be able to use it to enhance their functionality however.
+Small print: Zephyr Industries PubSub isn't aimed to directly provide any player-visible behaviour itself. If you install it on a block somewhere, any compatible scripts will be able to use it to enhance their functionality however.
 
 ## Instructions:
 * Place on a Programmable Block.
@@ -43,7 +43,7 @@ There's more: all these scripts could be running at once. PubSub makes sure ever
 
 To send events, you just send a command to the programmable block running the PubSub script.
 
-To receive events, you first have to register with the PubSub programmable block to receive those events. To do this, you just need to issue a `pubsub.subscribe` event with the `EntityId` of the programmable block your script is running on. Simple!
+To receive events, you first have to register with the PubSub programmable block to receive those events. To do this, you just need to issue a `pubsub.subscribe` event with the `EntityId` of the programmable block your script is running on. Events will then be sent to the consuming script as commands. Simple!
 
 (Don't worry about `EntityId` being mutable, it's only used temporarily during registration.)
 
@@ -112,6 +112,11 @@ public void MyCodeThatDoesSomeStuff() {
     double wind_turbine_efficiency = SomeCalculationOrOther();
 
     // Let's issue it as a datapoint.issue event.
+
+    // Event names should be dot.notation to namespace them.
+    // You should probably try to be descriptive and general purpose so other people can
+    // use your event format, rather than try to make it specific to your scripts.
+
     // This event takes a dataset name and a datapoint value as arguments.
     IssueEvent("datapoint.issue", $"\"wind_turbine_efficiency\" {wind_turbine_efficiency}");
 }
@@ -121,7 +126,7 @@ The format of the argument for events is whatever agreed convention there is bet
 
 #### Consumer Setup
 
-Consuming events is a little more complciated. First we need to register to receive events. To do that, let's modify the basic setup a little:
+Consuming events is a little more complicated. First we need to register to receive events. To do that, let's modify the basic setup a little:
 
 ```C#
 public void FindPubSubBlocks() {
@@ -150,6 +155,7 @@ public void Main(string argument, UpdateType updateSource) {
         if (_arguments.Count > 0 && _arguments[0] == "event") {
             if (_arguments[2] == "datapoint.issue") {
                 // I'll leave how you parse quoted-strings and other messiness in the rest of the arguments up to you. :D
+            } else if (_arguments[2] == "dataset.create") {
             }
         }
     }
