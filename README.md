@@ -1,5 +1,5 @@
 # space-engineers-zi-pubsub
-Space Engineers - Zephyr PubSub Controller
+Space Engineers - Zephyr Industries PubSub Controller
 
 ## Living in the Future(tm)
 
