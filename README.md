@@ -131,6 +131,7 @@ Consuming events is a little more complicated. First we need to register to rece
 ```C#
 public void FindPubSubBlocks() {
     _pubsub_blocks.Clear();
+    // FIXME: probably want to check block.IsSameConstructAs(Me)
     GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_pubsub_blocks, block => block.CustomName.Contains(PUBSUB_SCRIPT_NAME));
 
     // Every time we scan for pubsub blocks, (re)register for the events we want to consume.
