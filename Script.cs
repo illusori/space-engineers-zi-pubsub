@@ -29,7 +29,8 @@ double last_run_time_ms_tally = 0.0;
 
 /* Reused single-run state objects, only global to avoid realloc/gc-thrashing */
 // FIXME: _chart here? _panel?
-List<string> _arguments = new List<string>();
+MyCommandLine _command_line = new MyCommandLine();
+HashSet<IMyProgrammableBlock> _subscribers;
 
 public Program() {
     _script_title = $"{_script_name} v{_script_version}";
@@ -61,7 +62,7 @@ public void Main(string argument, UpdateType updateSource) {
         if ((updateSource & UpdateType.Update100) != 0) {
 	    _cycles++;
 
-	    ProcessArgument($"event {PUBSUB_ID} datapoint.issue \"{CHART_TIME}\" {TimeAsUsec(last_run_time_ms_tally)}");
+	    ProcessCommand($"event {PUBSUB_ID} datapoint.issue \"{CHART_TIME}\" {TimeAsUsec(last_run_time_ms_tally)}");
             if (_cycles > 1) {
                 time_total += last_run_time_ms_tally;
                 if (_cycles == 201) {
@@ -76,12 +77,12 @@ public void Main(string argument, UpdateType updateSource) {
 
             if ((_cycles % 30) == 0) {
                 FindPanels();
-    	        ProcessArgument($"event {PUBSUB_ID} dataset.create \"{CHART_TIME}\" \"us\"");
-    	        ProcessArgument($"event {PUBSUB_ID} dataset.create \"{CHART_LOAD}\" \"%\"");
+    	        ProcessCommand($"event {PUBSUB_ID} dataset.create \"{CHART_TIME}\" \"us\"");
+    	        ProcessCommand($"event {PUBSUB_ID} dataset.create \"{CHART_LOAD}\" \"%\"");
             }
 
 	    double load = (double)Runtime.CurrentInstructionCount * 100.0 / (double)Runtime.MaxInstructionCount;
-	    ProcessArgument($"event {PUBSUB_ID} datapoint.issue \"{CHART_LOAD}\" {load}");
+	    ProcessCommand($"event {PUBSUB_ID} datapoint.issue \"{CHART_LOAD}\" {load}");
 
 	    //long load_avg = (long)Chart.Find(CHART_LOAD).Avg;
 	    //long time_avg = (long)Chart.Find(CHART_TIME).Avg;
@@ -99,9 +100,9 @@ public void Main(string argument, UpdateType updateSource) {
             FlushToPanels(PANELS_DEBUG);
         }
         //if ((updateSource & (UpdateType.Trigger | UpdateType.Terminal)) != 0) {
-        if (argument != "") {
-            ProcessArgument(argument);
-        }
+        if (argument != null) {
+            ProcessCommand(argument);
+	}
     } catch (Exception e) {
         string mess = $"An exception occurred during script execution.\nException: {e}\n---";
         Log(mess);
@@ -111,37 +112,29 @@ public void Main(string argument, UpdateType updateSource) {
     }
 }
 
-public void ProcessArgument(string argument) {
-    //Warning($"Running command '{argument}'.");
-    // Deliberately simplistic parsing for speed.
-    int first_space = argument.IndexOf(" "),
-	second_space = first_space == -1 ? -1 : argument.IndexOf(" ", first_space + 1),
-	third_space = second_space == -1 ? -1 : argument.IndexOf(" ", second_space + 1);
-    if (first_space == -1 || second_space == -1 || third_space == -1) {
-        Warning($"Couldn't parse argument '{argument}': less than three words.");
-        return;
-    }
-    string command = argument.Substring(0, first_space);
-    string source = argument.Substring(first_space + 1, second_space - first_space - 1);
-    string event_name = argument.Substring(second_space + 1, third_space - second_space - 1);
-    string rest = argument.Substring(third_space + 1, argument.Length - third_space - 1);
-
-    //Warning($"command '{command}' source '{source}' event '{event_name}'\n  rest '{rest}'.");
-
-    if (command == "event") {
-        ProcessEvent(argument, source, event_name, rest);
+public void ProcessCommand(string argument) {
+    if (_command_line.TryParse(argument)) {
+	string command = _command_line.Argument(0);
+	if (command == null) {
+	    Log("No command specified");
+	} else if (command == "event") {
+	    ProcessEvent(argument);
+	} else {
+	    Log($"Unknown command {command}");
+	}
     }
 }
 
 // Format: event <source> <event> <event data...>
 // eg: event zi.bar-charts pubsub.register datapoint.issue <entity_id>
 //     event zi.inv-display datapoint.issue "Max Stored Power" 6.7
-public void ProcessEvent(string argument, string source, string event_name, string rest) {
+public void ProcessEvent(string argument) {
+    string source     = _command_line.Argument(1);
+    string event_name = _command_line.Argument(2);
     //Warning($"Received event '{event_name}' from source '{source}'.");
 
-    HashSet<IMyProgrammableBlock> subscribers;
-    if (_subscriptions.TryGetValue(event_name, out subscribers)) {
-        foreach (IMyProgrammableBlock block in subscribers) {
+    if (_subscriptions.TryGetValue(event_name, out _subscribers)) {
+        foreach (IMyProgrammableBlock block in _subscribers) {
             //Warning($"Sending event '{event_name}' to '{block.CustomName}'.");
             block.TryRun(argument);
         }
@@ -149,9 +142,8 @@ public void ProcessEvent(string argument, string source, string event_name, stri
 
     if (event_name == "pubsub.register") {
         // eg: event zi.bar-charts pubsub.register datapoint.issue <entity_id>
-        string[] args = rest.Split(' ');
-        long entity_id = long.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
-        string subscription = args[0];
+        string subscription = _command_line.Argument(3);
+        long entity_id = long.Parse(_command_line.Argument(4), System.Globalization.CultureInfo.InvariantCulture);
 
         // register new listener
         IMyProgrammableBlock block = (IMyProgrammableBlock)GridTerminalSystem.GetBlockWithId(entity_id);
@@ -160,9 +152,8 @@ public void ProcessEvent(string argument, string source, string event_name, stri
         }
     } else if (event_name == "pubsub.unregister") {
         // eg: event zi.bar-charts pubsub.unregister datapoint.issue <entity_id>
-        string[] args = rest.Split(' ');
-        long entity_id = long.Parse(args[1], System.Globalization.CultureInfo.InvariantCulture);
-        string subscription = args[0];
+        string subscription = _command_line.Argument(3);
+        long entity_id = long.Parse(_command_line.Argument(4), System.Globalization.CultureInfo.InvariantCulture);
 
         // unregister listener
         IMyProgrammableBlock block = (IMyProgrammableBlock)GridTerminalSystem.GetBlockWithId(entity_id);
