@@ -16,7 +16,7 @@ Small print: Zephyr Industries PubSub isn't aimed to directly provide any player
 ## Instructions:
 * Place on a Programmable Block.
 * That's it, there's no user-configurable stuff to do. Any scripts that use it will find it.
-* If you teally want some debugging info: Mark LCD panels by adding a tag to their name and on the next base scan (every 30s or so) the script will start using it.
+* If you really want some debugging info: Mark LCD panels by adding a tag to their name and on the next base scan (every 30s or so) the script will start using it.
   * `@PubSubDebugDisplay` displays info useful for script development, including performance.
   * `@PubSubWarningDisplay` displays any issues the script encountered.
   * Additionally if you have [Zephyr Industries Bar Charts](https://github.com/illusori/space-engineers-zi-bar-charts) installed it will provide two charts `"PubSub Exec Time"` and `"PubSub Instr Load"` that you can display.
@@ -131,8 +131,7 @@ Consuming events is a little more complicated. First we need to register to rece
 ```C#
 public void FindPubSubBlocks() {
     _pubsub_blocks.Clear();
-    // FIXME: probably want to check block.IsSameConstructAs(Me)
-    GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_pubsub_blocks, block => block.CustomName.Contains(PUBSUB_SCRIPT_NAME));
+    GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_pubsub_blocks, block => block.CustomName.Contains(PUBSUB_SCRIPT_NAME) && block.IsSameConstructAs(Me));
 
     // Every time we scan for pubsub blocks, (re)register for the events we want to consume.
     // Doing it each time is a little wasteful, but it means we automatically correct for when new
@@ -166,6 +165,10 @@ public void Main(string argument, UpdateType updateSource) {
 ## Issues
 
 Multiple PubSub Controllers will end up sending multiple events to consumers. Consumers should probably try to handle this gracefully. This is somewhat unavoidable with grid merging being a thing.
+
+If you stick to docking your grids with connectors then the snippet for finding a PubSub controller will only find PubSub controllers on the same physical grid. If you dock using rotors or merge blocks then you'll have to figure out a way to manage that complexity yourself I'm afraid.
+
+Once a block has registered with a PubSub controller as a listener, that PubSub controller will be able to send it events even if they end up on separate grids, until the PubSub controller loses the reference when it restarts (on game reload for example). This behaviour should be considered an unintended side-effect and may well change in future versions.
 
 ## Contributing:
 

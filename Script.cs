@@ -190,7 +190,7 @@ public double TimeAsUsec(double t) {
 public void FindPanels() {
     for (int i = 0; i < SIZE_PANELS; i++) {
         _panels[i].Clear();
-        GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_panels[i], block => block.CustomName.Contains(_panel_tags[i]));
+        GridTerminalSystem.GetBlocksOfType<IMyTextPanel>(_panels[i], block => block.CustomName.Contains(_panel_tags[i]) && block.IsSameConstructAs(Me));
         for (int j = 0, szj = _panels[i].Count; j < szj; j++) {
             _panels[i][j].ContentType = ContentType.TEXT_AND_IMAGE;
             _panels[i][j].Font = "Monospace";
