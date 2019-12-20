@@ -19,7 +19,7 @@ Small print: Zephyr Industries PubSub isn't aimed to directly provide any player
 * If you really want some debugging info: Mark LCD panels by adding a tag to their name and on the next base scan (every 30s or so) the script will start using it.
   * `@PubSubDebugDisplay` displays info useful for script development, including performance.
   * `@PubSubWarningDisplay` displays any issues the script encountered.
-  * Additionally if you have [Zephyr Industries Bar Charts](https://github.com/illusori/space-engineers-zi-bar-charts) installed it will provide two charts `"PubSub Exec Time"` and `"PubSub Instr Load"` that you can display. See [#Charts] for more.
+  * Additionally if you have [Zephyr Industries Bar Charts](https://github.com/illusori/space-engineers-zi-bar-charts) installed it will provide two charts `"PubSub Exec Time"` and `"PubSub Instr Load"` that you can display. See [Charts](#charts) for more.
 
 ## Instructions for Script Authors
 
