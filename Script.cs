@@ -1,5 +1,5 @@
 string _script_name = "Zephyr Industries PubSub Controller";
-string _script_version = "1.0.0";
+string _script_version = "1.0.1";
 
 string _script_title = null;
 string _script_title_nl = null;
@@ -12,6 +12,8 @@ const int SIZE_PANELS  = 2;
 
 const string CHART_TIME = "PubSub Exec Time";
 const string CHART_LOAD = "PubSub Instr Load";
+const string CHART_EVENTS_RX = "PubSub Events Rx";
+const string CHART_EVENTS_TX = "PubSub Events Tx";
 
 List<string> _panel_tags = new List<string>(SIZE_PANELS) { "@PubSubDebugDisplay", "@PubSubWarningDisplay" };
 
@@ -24,8 +26,8 @@ Dictionary<string, HashSet<IMyProgrammableBlock>> _subscriptions = new Dictionar
 List<List<IMyTextPanel>> _panels = new List<List<IMyTextPanel>>(SIZE_PANELS);
 List<string> _panel_text = new List<string>(SIZE_PANELS) { "", "", };
 
-double time_total = 0.0;
-double last_run_time_ms_tally = 0.0;
+double _time_total = 0.0, _last_run_time_ms_tally = 0.0;
+int _events_rx = 0, _events_tx = 0;
 
 /* Reused single-run state objects, only global to avoid realloc/gc-thrashing */
 // FIXME: _chart here? _panel?
@@ -58,18 +60,18 @@ public void Save() {
 public void Main(string argument, UpdateType updateSource) {
     try {
         // Tally up all invocation times and record them as one on the non-command runs.
-        last_run_time_ms_tally += Runtime.LastRunTimeMs;
+        _last_run_time_ms_tally += Runtime.LastRunTimeMs;
         if ((updateSource & UpdateType.Update100) != 0) {
 	    _cycles++;
 
-	    ProcessCommand($"event {PUBSUB_ID} datapoint.issue \"{CHART_TIME}\" {TimeAsUsec(last_run_time_ms_tally)}");
+	    ProcessCommand($"event {PUBSUB_ID} datapoint.issue \"{CHART_TIME}\" {TimeAsUsec(_last_run_time_ms_tally)}");
             if (_cycles > 1) {
-                time_total += last_run_time_ms_tally;
+                _time_total += _last_run_time_ms_tally;
                 if (_cycles == 201) {
-                    Warning($"Total time after 200 cycles: {time_total}ms.");
+                    Warning($"Total time after 200 cycles: {_time_total}ms.");
                 }
             }
-            last_run_time_ms_tally = 0.0;
+            _last_run_time_ms_tally = 0.0;
 
             ClearPanels(PANELS_DEBUG);
 
@@ -79,14 +81,23 @@ public void Main(string argument, UpdateType updateSource) {
                 FindPanels();
     	        ProcessCommand($"event {PUBSUB_ID} dataset.create \"{CHART_TIME}\" \"us\"");
     	        ProcessCommand($"event {PUBSUB_ID} dataset.create \"{CHART_LOAD}\" \"%\"");
+    	        ProcessCommand($"event {PUBSUB_ID} dataset.create \"{CHART_EVENTS_RX}\" \"\"");
+    	        ProcessCommand($"event {PUBSUB_ID} dataset.create \"{CHART_EVENTS_TX}\" \"\"");
             }
 
 	    double load = (double)Runtime.CurrentInstructionCount * 100.0 / (double)Runtime.MaxInstructionCount;
 	    ProcessCommand($"event {PUBSUB_ID} datapoint.issue \"{CHART_LOAD}\" {load}");
 
+            // Slightly sneaky, push the counts for sending rx/tx themseles onto the next cycle.
+            int rx = _events_rx, tx = _events_tx;
+            _events_rx = 0;
+            _events_tx = 0;
+	    ProcessCommand($"event {PUBSUB_ID} datapoint.issue \"{CHART_EVENTS_RX}\" {rx}");
+	    ProcessCommand($"event {PUBSUB_ID} datapoint.issue \"{CHART_EVENTS_TX}\" {tx}");
+
 	    //long load_avg = (long)Chart.Find(CHART_LOAD).Avg;
 	    //long time_avg = (long)Chart.Find(CHART_TIME).Avg;
-	    //Log($"Load avg {load_avg}% in {time_avg}us");
+	    //Log($"  [Avg ] Load {load_avg}% in {time_avg}us");
 
             // Start at T-1 - exec time hasn't been updated yet.
             //for (int i = 1; i < 16; i++) {
@@ -97,6 +108,7 @@ public void Main(string argument, UpdateType updateSource) {
                  */
             //}
             // FIXME: events/subscribers Log($"Charts: {Chart.Count}, DrawBuffers: {Chart.BufferCount}");
+            Log($"[Cycle {_cycles}]\n  Events received: {rx}, Events transmitted: {tx}");
             FlushToPanels(PANELS_DEBUG);
         }
         //if ((updateSource & (UpdateType.Trigger | UpdateType.Terminal)) != 0) {
@@ -133,10 +145,12 @@ public void ProcessEvent(string argument) {
     string event_name = _command_line.Argument(2);
     //Warning($"Received event '{event_name}' from source '{source}'.");
 
+    _events_rx++;
     if (_subscriptions.TryGetValue(event_name, out _subscribers)) {
         foreach (IMyProgrammableBlock block in _subscribers) {
             //Warning($"Sending event '{event_name}' to '{block.CustomName}'.");
             block.TryRun(argument);
+            _events_tx++;
         }
     }
 
