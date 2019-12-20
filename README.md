@@ -19,7 +19,7 @@ Small print: Zephyr Industries PubSub isn't aimed to directly provide any player
 * If you really want some debugging info: Mark LCD panels by adding a tag to their name and on the next base scan (every 30s or so) the script will start using it.
   * `@PubSubDebugDisplay` displays info useful for script development, including performance.
   * `@PubSubWarningDisplay` displays any issues the script encountered.
-  * Additionally if you have [Zephyr Industries Bar Charts](https://github.com/illusori/space-engineers-zi-bar-charts) installed it will provide two charts `"PubSub Exec Time"` and `"PubSub Instr Load"` that you can display.
+  * Additionally if you have [Zephyr Industries Bar Charts](https://github.com/illusori/space-engineers-zi-bar-charts) installed it will provide two charts `"PubSub Exec Time"` and `"PubSub Instr Load"` that you can display. See [#Charts] for more.
 
 ## Instructions for Script Authors
 
@@ -169,6 +169,17 @@ Multiple PubSub Controllers will end up sending multiple events to consumers. Co
 If you stick to docking your grids with connectors then the snippet for finding a PubSub controller will only find PubSub controllers on the same physical grid. If you dock using rotors or merge blocks then you'll have to figure out a way to manage that complexity yourself I'm afraid.
 
 Once a block has registered with a PubSub controller as a listener, that PubSub controller will be able to send it events even if they end up on separate grids, until the PubSub controller loses the reference when it restarts (on game reload for example). This behaviour should be considered an unintended side-effect and may well change in future versions.
+
+## Charts
+
+Zephyr Industries PubSub Controller integrates with [Zephyr Industries Bar Charts](https://github.com/illusori/space-engineers-zi-bar-charts) and provides the following charts:
+
+Series name | Default Unit | Description
+:---: | :---: | :---
+PubSub Exec Time | us | (debug) Microsecond timings of how long the script ran for on each invocation.
+PubSub Instr Load | - | (debug) Instruction count complexity load for each invocation of the script.
+PubSub Events Rx | - | (debug) Number of events received by this controller this cycle.
+PubSub Events Tx | - | (debug) Number of events transmitted by this controller this cycle.
 
 ## Contributing:
 
