@@ -7,7 +7,7 @@ Space Engineers - Zephyr Industries PubSub Controller
 
 Zephyr Industries has what you need, I'm here to tell you about their great new product: _Zephyr Industries PubSub Controller_.
 
-Register to consume events from event providers without caring if they exist or how they work! Send events to consumers without caring if they exist or how they work! You don't even need to know how many consumers of your data there are, or what script is providing your data, as long as they follow a consistent event format!
+Subscribe to consume events from event providers without caring if they exist or how they work! Send events to consumers without caring if they exist or how they work! You don't even need to know how many consumers of your data there are, or what script is providing your data, as long as they follow a consistent event format!
 
 Life has never been so good, that's what Living in the Future(tm) means!
 
@@ -43,7 +43,7 @@ There's more: all these scripts could be running at once. PubSub makes sure ever
 
 To send events, you just send a command to the programmable block running the PubSub script.
 
-To receive events, you first have to register with the PubSub programmable block to receive those events. To do this, you just need to issue a `pubsub.subscribe` event with the `EntityId` of the programmable block your script is running on. Events will then be sent to the consuming script as commands. Simple!
+To receive events, you first have to subscribe with the PubSub programmable block to receive those events. To do this, you just need to issue a `pubsub.subscribe` event with the `EntityId` of the programmable block your script is running on. Events will then be sent to the consuming script as commands. Simple!
 
 (Don't worry about `EntityId` being mutable, it's only used temporarily during registration.)
 
@@ -88,9 +88,9 @@ public void FindPubSubBlocks() {
     GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_pubsub_blocks, block => block.CustomName.Contains(PUBSUB_SCRIPT_NAME));
 }
 
-// This issues an event to all the PubSub controllers we know about.
-// You proably only will have one of them, but docking and merging gridsf might change that, so send to them all.
-public void IssueEvent(string event_name, string event_args) {
+// This publishes an event to all the PubSub controllers we know about.
+// You proably only will have one of them, but docking and merging grids might change that, so send to them all.
+public void PublishEvent(string event_name, string event_args) {
     foreach (IMyProgrammableBlock block in _pubsub_blocks) {
         if (block != null) {
             block.TryRun($"event {PUBSUB_ID} {event_name} {event_args}");
@@ -118,7 +118,7 @@ public void MyCodeThatDoesSomeStuff() {
     // use your event format, rather than try to make it specific to your scripts.
 
     // This event takes a dataset name and a datapoint value as arguments.
-    IssueEvent("datapoint.issue", $"\"wind_turbine_efficiency\" {wind_turbine_efficiency}");
+    PublishEvent("datapoint.issue", $"\"wind_turbine_efficiency\" {wind_turbine_efficiency}");
 }
 ```
 
@@ -126,21 +126,21 @@ The format of the argument for events is whatever agreed convention there is bet
 
 #### Consumer Setup
 
-Consuming events is a little more complicated. First we need to register to receive events. To do that, let's modify the basic setup a little:
+Consuming events is a little more complicated. First we need to subscribe to receive events. To do that, let's modify the basic setup a little:
 
 ```C#
 public void FindPubSubBlocks() {
     _pubsub_blocks.Clear();
     GridTerminalSystem.GetBlocksOfType<IMyProgrammableBlock>(_pubsub_blocks, block => block.CustomName.Contains(PUBSUB_SCRIPT_NAME) && block.IsSameConstructAs(Me));
 
-    // Every time we scan for pubsub blocks, (re)register for the events we want to consume.
+    // Every time we scan for pubsub blocks, (re)subscribe for the events we want to consume.
     // Doing it each time is a little wasteful, but it means we automatically correct for when new
     // PubSub controllers are found, or for if they've had their script stopped and restarted.
 
-    // Register for the datapoint.issue event, the entityid lets the PubSub controller know who we are.
-    IssueEvent("pubsub.register", $"datapoint.issue {Me.EntityId}");
-    // Nothing stops you from registering for as many event types as you want to consume.
-    IssueEvent("pubsub.register", $"dataset.create {Me.EntityId}");
+    // Suscribe for the datapoint.issue event, the entityid lets the PubSub controller know who we are.
+    PublishEvent("pubsub.subscribe", $"datapoint.issue {Me.EntityId}");
+    // Nothing stops you from subscribing to as many event types as you want to consume.
+    PublishEvent("pubsub.subscribe", $"dataset.create {Me.EntityId}");
 }
 ```
 
@@ -168,7 +168,7 @@ Multiple PubSub Controllers will end up sending multiple events to consumers. Co
 
 If you stick to docking your grids with connectors then the snippet for finding a PubSub controller will only find PubSub controllers on the same physical grid. If you dock using rotors or merge blocks then you'll have to figure out a way to manage that complexity yourself I'm afraid.
 
-Once a block has registered with a PubSub controller as a listener, that PubSub controller will be able to send it events even if they end up on separate grids, until the PubSub controller loses the reference when it restarts (on game reload for example). This behaviour should be considered an unintended side-effect and may well change in future versions.
+Once a block has subscribed to a PubSub controller as a listener, that PubSub controller will be able to send it events even if they end up on separate grids, until the PubSub controller loses the reference when it restarts (on game reload for example). This behaviour should be considered an unintended side-effect and may well change in future versions.
 
 ## Charts
 

@@ -1,5 +1,5 @@
 string _script_name = "Zephyr Industries PubSub Controller";
-string _script_version = "1.0.1";
+string _script_version = "1.0.2";
 
 string _script_title = null;
 string _script_title_nl = null;
@@ -138,7 +138,7 @@ public void ProcessCommand(string argument) {
 }
 
 // Format: event <source> <event> <event data...>
-// eg: event zi.bar-charts pubsub.register datapoint.issue <entity_id>
+// eg: event zi.bar-charts pubsub.subscribe datapoint.issue <entity_id>
 //     event zi.inv-display datapoint.issue "Max Stored Power" 6.7
 public void ProcessEvent(string argument) {
     string source     = _command_line.Argument(1);
@@ -154,8 +154,8 @@ public void ProcessEvent(string argument) {
         }
     }
 
-    if (event_name == "pubsub.register") {
-        // eg: event zi.bar-charts pubsub.register datapoint.issue <entity_id>
+    if (event_name == "pubsub.subscribe" || event_name == "pubsub.register") {
+        // eg: event zi.bar-charts pubsub.subscribe datapoint.issue <entity_id>
         string subscription = _command_line.Argument(3);
         long entity_id = long.Parse(_command_line.Argument(4), System.Globalization.CultureInfo.InvariantCulture);
 
@@ -164,8 +164,8 @@ public void ProcessEvent(string argument) {
         if (block != null) {
             AddSubscriber(subscription, block);
         }
-    } else if (event_name == "pubsub.unregister") {
-        // eg: event zi.bar-charts pubsub.unregister datapoint.issue <entity_id>
+    } else if (event_name == "pubsub.unsubscribe" || event_name == "pubsub.unregister") {
+        // eg: event zi.bar-charts pubsub.unsubscribe datapoint.issue <entity_id>
         string subscription = _command_line.Argument(3);
         long entity_id = long.Parse(_command_line.Argument(4), System.Globalization.CultureInfo.InvariantCulture);
 
